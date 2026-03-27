@@ -91,16 +91,27 @@ npm run build
 
 ## GitHub Pages
 
-`vite.config.ts` is configured with:
+`vite.config.ts` now uses:
 
 ```ts
-base: "/kannada_gothu/";
+const base = process.env.VITE_BASE_PATH || "/";
 ```
 
-To deploy:
+This supports both:
 
-1. Build with `npm run build`
-2. Publish `dist/` to GitHub Pages (for example via `gh-pages` branch or GitHub Actions)
+- User site repo (`<username>.github.io`) -> `/`
+- Project repo (`<username>/<repo>`) -> `/<repo>/`
+
+An automated workflow is included at `.github/workflows/deploy.yml` and computes the correct base path before building.
+
+### One-time GitHub setup
+
+1. Push this repo to GitHub.
+2. In repo settings -> Pages:
+   - Source: **GitHub Actions**
+3. Push to `main` (or run workflow manually).
+
+The workflow builds `dist/` and deploys it directly to GitHub Pages.
 
 ## Notes
 
