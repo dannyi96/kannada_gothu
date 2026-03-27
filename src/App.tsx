@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Section } from "./components/Section";
+import { RoadmapGraph } from "./components/RoadmapGraph";
 import { TopicPanel } from "./components/TopicPanel";
 import { roadmapSections, type Topic } from "./data/roadmap";
 import { useProgressStore } from "./store/useProgressStore";
@@ -29,7 +29,7 @@ function App() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">Kannada Roadmap</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Client-side learning path derived from your Kannada notes PDF.
+            Graph roadmap with prerequisite unlocks, inspired by NeetCode.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -47,17 +47,12 @@ function App() {
       </header>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-5">
-          {roadmapSections.map((section) => (
-            <Section
-              key={section.id}
-              section={section}
-              selectedTopicId={selectedTopicId}
-              getTopicStatus={getTopicStatus}
-              onSelectTopic={setSelectedTopicId}
-            />
-          ))}
-        </div>
+        <RoadmapGraph
+          sections={roadmapSections}
+          selectedTopicId={selectedTopicId}
+          getTopicStatus={getTopicStatus}
+          onSelectTopic={setSelectedTopicId}
+        />
         <TopicPanel topic={selectedTopic} status={selectedStatus} onMarkCompleted={markCompleted} />
       </div>
     </main>

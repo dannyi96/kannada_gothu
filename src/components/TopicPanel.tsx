@@ -25,7 +25,7 @@ export function TopicPanel({ topic, status, onMarkCompleted }: TopicPanelProps) 
         Difficulty: <span className="font-medium capitalize">{topic.difficulty}</span>
       </p>
       <div className="mt-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Extracted Notes</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Notes and Examples</h3>
         <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-700">
           {topic.content.map((line) => (
             <li key={line}>{line}</li>
