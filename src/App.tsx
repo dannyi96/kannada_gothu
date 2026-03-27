@@ -27,34 +27,38 @@ function App() {
     <main className="mx-auto max-w-7xl p-4 md:p-8">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">Kannada Roadmap</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-bold text-slate-100 md:text-3xl">Kannada Roadmap</h1>
+          <p className="mt-1 text-sm text-slate-400">
             Graph roadmap with prerequisite unlocks, inspired by NeetCode.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700">
+          <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-sm font-medium text-slate-300">
             Completed: {completedCount}/{allTopics.length}
           </span>
           <button
             type="button"
             onClick={resetProgress}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
           >
             Reset
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr]">
-        <RoadmapGraph
-          sections={roadmapSections}
-          selectedTopicId={selectedTopicId}
-          getTopicStatus={getTopicStatus}
-          onSelectTopic={setSelectedTopicId}
-        />
-        <TopicPanel topic={selectedTopic} status={selectedStatus} onMarkCompleted={markCompleted} />
-      </div>
+      <RoadmapGraph
+        sections={roadmapSections}
+        selectedTopicId={selectedTopicId}
+        getTopicStatus={getTopicStatus}
+        onSelectTopic={setSelectedTopicId}
+      />
+
+      <TopicPanel
+        topic={selectedTopic}
+        status={selectedStatus}
+        onMarkCompleted={markCompleted}
+        onClose={() => setSelectedTopicId(null)}
+      />
     </main>
   );
 }

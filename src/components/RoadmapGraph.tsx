@@ -25,16 +25,44 @@ type Edge = {
   y2: number;
 };
 
+type CategoryMeta = {
+  icon: string;
+  label: string;
+  accent: string;
+};
+
 const statusClasses: Record<TopicStatus, string> = {
-  locked: "border-slate-300 bg-slate-100 text-slate-400",
-  unlocked: "border-blue-300 bg-blue-50 text-blue-900 hover:bg-blue-100",
-  completed: "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
+  locked: "border-slate-700 bg-slate-900/90 text-slate-500",
+  unlocked:
+    "border-blue-500/50 bg-gradient-to-br from-slate-900 to-slate-800 text-blue-200 hover:from-slate-800 hover:to-slate-700",
+  completed:
+    "border-emerald-500/50 bg-gradient-to-br from-slate-900 to-slate-800 text-emerald-200 hover:from-slate-800 hover:to-slate-700",
 };
 
 const difficultyClasses: Record<Topic["difficulty"], string> = {
-  easy: "bg-sky-100 text-sky-700",
-  medium: "bg-amber-100 text-amber-700",
-  hard: "bg-rose-100 text-rose-700",
+  easy: "bg-sky-500/20 text-sky-200",
+  medium: "bg-amber-500/20 text-amber-200",
+  hard: "bg-rose-500/20 text-rose-200",
+};
+
+const getCategoryMeta = (sectionTitle: string, topicTitle: string): CategoryMeta => {
+  const text = `${sectionTitle} ${topicTitle}`.toLowerCase();
+  if (text.includes("conversation") || text.includes("dialogue") || text.includes("shopping") || text.includes("travel") || text.includes("office")) {
+    return { icon: "💬", label: "Conversation", accent: "border-l-cyan-400" };
+  }
+  if (text.includes("tense") || text.includes("continuous")) {
+    return { icon: "⏱️", label: "Tense", accent: "border-l-violet-400" };
+  }
+  if (text.includes("question") || text.includes("negation")) {
+    return { icon: "❓", label: "Question", accent: "border-l-pink-400" };
+  }
+  if (text.includes("location") || text.includes("postposition")) {
+    return { icon: "📍", label: "Location", accent: "border-l-emerald-400" };
+  }
+  if (text.includes("number") || text.includes("greeting") || text.includes("introducing")) {
+    return { icon: "🗣️", label: "Basics", accent: "border-l-sky-400" };
+  }
+  return { icon: "🧠", label: "Grammar", accent: "border-l-amber-400" };
 };
 
 export function RoadmapGraph({
@@ -109,7 +137,7 @@ export function RoadmapGraph({
   return (
     <div
       ref={containerRef}
-      className="relative overflow-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="relative overflow-auto rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-950 to-slate-900 p-4 md:p-5 shadow-xl"
     >
       <svg className="pointer-events-none absolute left-0 top-0 h-full w-full" aria-hidden="true">
         {edges.map((edge) => (
@@ -117,27 +145,22 @@ export function RoadmapGraph({
             key={`${edge.fromId}-${edge.toId}`}
             d={`M ${edge.x1} ${edge.y1} C ${edge.x1} ${(edge.y1 + edge.y2) / 2}, ${edge.x2} ${(edge.y1 + edge.y2) / 2}, ${edge.x2} ${edge.y2}`}
             fill="none"
-            stroke="#94a3b8"
+            stroke={selectedTopicId === edge.toId || selectedTopicId === edge.fromId ? "#60a5fa" : "#334155"}
             strokeWidth="2"
-            opacity="0.75"
+            opacity={selectedTopicId === edge.toId || selectedTopicId === edge.fromId ? "0.95" : "0.8"}
           />
         ))}
       </svg>
 
-      <div className="relative z-10 min-w-[980px] space-y-6 pb-4">
+      <div className="relative z-10 space-y-5 pb-2">
         {sections.map((section) => (
-          <section key={section.id}>
-            <h2 className="mb-3 text-base font-semibold text-slate-900">{section.title}</h2>
-            <div
-              className="grid gap-3"
-              style={{
-                gridTemplateColumns: `repeat(${Math.max(section.topics.length, 2)}, minmax(200px, 1fr))`,
-              }}
-            >
+          <section key={section.id} className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+            <h2 className="mb-3 text-sm font-semibold text-slate-200 md:text-base">{section.title}</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {section.topics.map((topic) => {
                 const status = getTopicStatus(topic);
                 const isSelected = selectedTopicId === topic.id;
-                const disabled = status === "locked";
+                const category = getCategoryMeta(section.title, topic.title);
 
                 return (
                   <button
@@ -146,16 +169,16 @@ export function RoadmapGraph({
                       nodeRefs.current[topic.id] = el;
                     }}
                     type="button"
-                    disabled={disabled}
                     onClick={() => onSelectTopic(topic.id)}
-                    className={`rounded-xl border p-3 text-left transition ${
+                    className={`rounded-xl border border-l-4 p-3 text-left shadow-sm transition duration-150 ${
                       statusClasses[status]
-                    } ${isSelected ? "ring-2 ring-slate-500 ring-offset-1" : ""} ${
-                      disabled ? "cursor-not-allowed" : "cursor-pointer"
-                    }`}
+                    } ${category.accent} ${isSelected ? "ring-2 ring-blue-400 ring-offset-0" : "hover:-translate-y-0.5"} cursor-pointer`}
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold">{topic.title}</p>
+                      <div>
+                        <p className="text-xs text-slate-400">{category.icon} {category.label}</p>
+                        <p className="text-sm font-semibold">{topic.title}</p>
+                      </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${difficultyClasses[topic.difficulty]}`}>
                         {topic.difficulty}
                       </span>
