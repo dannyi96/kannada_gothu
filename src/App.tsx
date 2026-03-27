@@ -1,17 +1,34 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AppNav } from "./components/AppNav";
+import { ProgressHeader } from "./components/ProgressHeader";
 import { RoadmapGraph } from "./components/RoadmapGraph";
 import { TopicPanel } from "./components/TopicPanel";
+import { filterSectionsByNav, firstSectionIdInNav } from "./config/navGroups";
 import { roadmapSections, type Topic } from "./data/roadmap";
 import { useProgressStore } from "./store/useProgressStore";
+import { getRecommendedNextTopicId, getStartHereTopicId } from "./utils/progression";
 import { isUnlocked } from "./utils/unlockLogic";
 
 type TopicStatus = "locked" | "unlocked" | "completed";
 
 function App() {
-  const { completedTopics, markCompleted, resetProgress } = useProgressStore();
+  const completedTopics = useProgressStore((s) => s.completedTopics);
+  const markCompleted = useProgressStore((s) => s.markCompleted);
+  const resetProgress = useProgressStore((s) => s.resetProgress);
+  const xp = useProgressStore((s) => s.xp);
+  const streak = useProgressStore((s) => s.streak);
+  const recordVisit = useProgressStore((s) => s.recordVisit);
+
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [activeNav, setActiveNav] = useState<string | null>(null);
+
+  useEffect(() => {
+    recordVisit();
+  }, [recordVisit]);
 
   const allTopics = useMemo(() => roadmapSections.flatMap((section) => section.topics), []);
+  const topicById = useMemo(() => new Map(allTopics.map((t) => [t.id, t])), [allTopics]);
+
   const selectedTopic = allTopics.find((topic) => topic.id === selectedTopicId) ?? null;
 
   const getTopicStatus = (topic: Topic): TopicStatus => {
@@ -23,39 +40,66 @@ function App() {
   const selectedStatus = selectedTopic ? getTopicStatus(selectedTopic) : null;
   const completedCount = completedTopics.size;
 
-  return (
-    <main className="mx-auto max-w-7xl p-4 md:p-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100 md:text-3xl">Kannada Roadmap</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Graph roadmap with prerequisite unlocks, inspired by NeetCode.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-sm font-medium text-slate-300">
-            Completed: {completedCount}/{allTopics.length}
-          </span>
-          <button
-            type="button"
-            onClick={resetProgress}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
-          >
-            Reset
-          </button>
-        </div>
-      </header>
+  const startId = getStartHereTopicId(allTopics);
+  const nextId = getRecommendedNextTopicId(allTopics, completedTopics);
+  const startTopicTitle = startId ? topicById.get(startId)?.title ?? null : null;
+  const nextTopicTitle = nextId ? topicById.get(nextId)?.title ?? null : null;
 
-      <RoadmapGraph
-        sections={roadmapSections}
-        selectedTopicId={selectedTopicId}
-        getTopicStatus={getTopicStatus}
-        onSelectTopic={setSelectedTopicId}
-      />
+  const prerequisiteTitles = selectedTopic
+    ? selectedTopic.prerequisites.map((id) => topicById.get(id)?.title).filter((x): x is string => Boolean(x))
+    : [];
+
+  const visibleSections = useMemo(
+    () => filterSectionsByNav(roadmapSections, activeNav),
+    [activeNav],
+  );
+
+  useEffect(() => {
+    if (!activeNav) return;
+    const sid = firstSectionIdInNav(activeNav);
+    if (!sid) return;
+    const id = `roadmap-section-${sid}`;
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [activeNav]);
+
+  const continueLearning = () => {
+    if (nextId) {
+      setSelectedTopicId(nextId);
+    }
+  };
+
+  return (
+    <main className="min-h-svh bg-slate-950">
+      <div className="mx-auto max-w-7xl p-4 pb-10 md:p-8">
+        <ProgressHeader
+          completedCount={completedCount}
+          totalTopics={allTopics.length}
+          xp={xp}
+          streak={streak}
+          startTopicTitle={startTopicTitle}
+          nextTopicTitle={nextTopicTitle}
+          onContinue={continueLearning}
+          onReset={resetProgress}
+        />
+
+        <AppNav activeNav={activeNav} onSelectNav={setActiveNav} />
+
+        <RoadmapGraph
+          sections={visibleSections}
+          selectedTopicId={selectedTopicId}
+          recommendedTopicId={nextId}
+          getTopicStatus={getTopicStatus}
+          onSelectTopic={setSelectedTopicId}
+        />
+      </div>
 
       <TopicPanel
+        key={selectedTopicId ?? "closed"}
         topic={selectedTopic}
         status={selectedStatus}
+        prerequisiteTitles={prerequisiteTitles}
         onMarkCompleted={markCompleted}
         onClose={() => setSelectedTopicId(null)}
       />

@@ -13,3 +13,18 @@ body {
   color: #e2e8f0;
   color-scheme: dark;
 }
+
+@keyframes topic-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.topic-section-enter {
+  animation: topic-section-enter 0.25s ease-out;
+}

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Section, Topic } from "../data/roadmap";
+import { CollapsibleRoadmapSection } from "./CollapsibleRoadmapSection";
 
 type TopicStatus = "locked" | "unlocked" | "completed";
 
@@ -12,6 +13,7 @@ type Node = {
 type RoadmapGraphProps = {
   sections: Section[];
   selectedTopicId: string | null;
+  recommendedTopicId: string | null;
   getTopicStatus: (topic: Topic) => TopicStatus;
   onSelectTopic: (topicId: string) => void;
 };
@@ -32,22 +34,29 @@ type CategoryMeta = {
 };
 
 const statusClasses: Record<TopicStatus, string> = {
-  locked: "border-slate-700 bg-slate-900/90 text-slate-500",
+  locked:
+    "border-slate-700/90 bg-slate-950/90 text-slate-500 hover:bg-slate-900/95 cursor-pointer opacity-[0.92]",
   unlocked:
-    "border-blue-500/50 bg-gradient-to-br from-slate-900 to-slate-800 text-blue-200 hover:from-slate-800 hover:to-slate-700",
+    "border-blue-500/55 bg-gradient-to-br from-slate-900 to-slate-800 text-blue-100 hover:from-slate-800 hover:to-slate-700 hover:-translate-y-0.5 hover:shadow-md cursor-pointer",
   completed:
-    "border-emerald-500/50 bg-gradient-to-br from-slate-900 to-slate-800 text-emerald-200 hover:from-slate-800 hover:to-slate-700",
+    "border-emerald-500/55 bg-gradient-to-br from-slate-900 to-emerald-950/30 text-emerald-100 hover:from-slate-800 hover:to-emerald-950/40 hover:-translate-y-0.5 hover:shadow-md cursor-pointer",
 };
 
 const difficultyClasses: Record<Topic["difficulty"], string> = {
-  easy: "bg-sky-500/20 text-sky-200",
-  medium: "bg-amber-500/20 text-amber-200",
-  hard: "bg-rose-500/20 text-rose-200",
+  easy: "bg-sky-500/25 text-sky-100 ring-1 ring-sky-500/30",
+  medium: "bg-amber-500/25 text-amber-100 ring-1 ring-amber-500/30",
+  hard: "bg-rose-500/25 text-rose-100 ring-1 ring-rose-500/30",
 };
 
 const getCategoryMeta = (sectionTitle: string, topicTitle: string): CategoryMeta => {
   const text = `${sectionTitle} ${topicTitle}`.toLowerCase();
-  if (text.includes("conversation") || text.includes("dialogue") || text.includes("shopping") || text.includes("travel") || text.includes("office")) {
+  if (
+    text.includes("conversation") ||
+    text.includes("dialogue") ||
+    text.includes("shopping") ||
+    text.includes("travel") ||
+    text.includes("office")
+  ) {
     return { icon: "💬", label: "Conversation", accent: "border-l-cyan-400" };
   }
   if (text.includes("tense") || text.includes("continuous")) {
@@ -68,12 +77,22 @@ const getCategoryMeta = (sectionTitle: string, topicTitle: string): CategoryMeta
 export function RoadmapGraph({
   sections,
   selectedTopicId,
+  recommendedTopicId,
   getTopicStatus,
   onSelectTopic,
 }: RoadmapGraphProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({});
+
+  const effectiveSectionOpen = useMemo(() => {
+    const out: Record<string, boolean> = {};
+    for (const s of sections) {
+      out[s.id] = sectionOpen[s.id] ?? true;
+    }
+    return out;
+  }, [sections, sectionOpen]);
 
   const nodes = useMemo<Node[]>(
     () =>
@@ -96,16 +115,23 @@ export function RoadmapGraph({
       const nextEdges: Edge[] = [];
 
       for (const node of nodes) {
+        if (effectiveSectionOpen[node.sectionId] === false) continue;
+
         const toEl = nodeRefs.current[node.topic.id];
         if (!toEl) continue;
         const toRect = toEl.getBoundingClientRect();
+        if (toRect.height < 4) continue;
         const toX = toRect.left + toRect.width / 2 - containerRect.left + container.scrollLeft;
         const toY = toRect.top - containerRect.top + container.scrollTop;
 
         for (const prerequisiteId of node.topic.prerequisites) {
+          const fromNode = nodes.find((n) => n.topic.id === prerequisiteId);
+          if (fromNode && effectiveSectionOpen[fromNode.sectionId] === false) continue;
+
           const fromEl = nodeRefs.current[prerequisiteId];
           if (!fromEl) continue;
           const fromRect = fromEl.getBoundingClientRect();
+          if (fromRect.height < 4) continue;
           const fromX = fromRect.left + fromRect.width / 2 - containerRect.left + container.scrollLeft;
           const fromY = fromRect.bottom - containerRect.top + container.scrollTop;
           nextEdges.push({
@@ -132,12 +158,19 @@ export function RoadmapGraph({
       window.removeEventListener("resize", computeEdges);
       container.removeEventListener("scroll", computeEdges);
     };
-  }, [nodes, selectedTopicId]);
+  }, [nodes, selectedTopicId, effectiveSectionOpen]);
+
+  const toggleSection = (id: string) => {
+    setSectionOpen((prev) => {
+      const current = prev[id] ?? true;
+      return { ...prev, [id]: !current };
+    });
+  };
 
   return (
     <div
       ref={containerRef}
-      className="relative overflow-auto rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-950 to-slate-900 p-4 md:p-5 shadow-xl"
+      className="relative overflow-auto rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-950 to-slate-900 p-4 shadow-xl md:p-6"
     >
       <svg className="pointer-events-none absolute left-0 top-0 h-full w-full" aria-hidden="true">
         {edges.map((edge) => (
@@ -145,53 +178,94 @@ export function RoadmapGraph({
             key={`${edge.fromId}-${edge.toId}`}
             d={`M ${edge.x1} ${edge.y1} C ${edge.x1} ${(edge.y1 + edge.y2) / 2}, ${edge.x2} ${(edge.y1 + edge.y2) / 2}, ${edge.x2} ${edge.y2}`}
             fill="none"
-            stroke={selectedTopicId === edge.toId || selectedTopicId === edge.fromId ? "#60a5fa" : "#334155"}
+            stroke={selectedTopicId === edge.toId || selectedTopicId === edge.fromId ? "#38bdf8" : "#475569"}
             strokeWidth="2"
-            opacity={selectedTopicId === edge.toId || selectedTopicId === edge.fromId ? "0.95" : "0.8"}
+            opacity={selectedTopicId === edge.toId || selectedTopicId === edge.fromId ? "0.95" : "0.65"}
+            className="transition-colors duration-300"
           />
         ))}
       </svg>
 
       <div className="relative z-10 space-y-5 pb-2">
-        {sections.map((section) => (
-          <section key={section.id} className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-            <h2 className="mb-3 text-sm font-semibold text-slate-200 md:text-base">{section.title}</h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {section.topics.map((topic) => {
-                const status = getTopicStatus(topic);
-                const isSelected = selectedTopicId === topic.id;
-                const category = getCategoryMeta(section.title, topic.title);
+        {sections.map((section) => {
+          const open = effectiveSectionOpen[section.id] !== false;
 
-                return (
-                  <button
-                    key={topic.id}
-                    ref={(el) => {
-                      nodeRefs.current[topic.id] = el;
-                    }}
-                    type="button"
-                    onClick={() => onSelectTopic(topic.id)}
-                    className={`rounded-xl border border-l-4 p-3 text-left shadow-sm transition duration-150 ${
-                      statusClasses[status]
-                    } ${category.accent} ${isSelected ? "ring-2 ring-blue-400 ring-offset-0" : "hover:-translate-y-0.5"} cursor-pointer`}
-                  >
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-xs text-slate-400">{category.icon} {category.label}</p>
-                        <p className="text-sm font-semibold">{topic.title}</p>
+          return (
+            <CollapsibleRoadmapSection
+              key={section.id}
+              id={`roadmap-section-${section.id}`}
+              title={section.title}
+              open={open}
+              onToggle={() => toggleSection(section.id)}
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {section.topics.map((topic) => {
+                  const status = getTopicStatus(topic);
+                  const isSelected = selectedTopicId === topic.id;
+                  const isRecommended = recommendedTopicId === topic.id && status !== "completed";
+                  const category = getCategoryMeta(section.title, topic.title);
+
+                  return (
+                    <button
+                      key={topic.id}
+                      ref={(el) => {
+                        nodeRefs.current[topic.id] = el;
+                      }}
+                      type="button"
+                      onClick={() => onSelectTopic(topic.id)}
+                      className={`rounded-xl border border-l-4 p-4 text-left shadow-md transition duration-200 ${
+                        statusClasses[status]
+                      } ${category.accent} ${
+                        isSelected ? "ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-950" : ""
+                      } ${
+                        isRecommended && !isSelected
+                          ? "ring-2 ring-violet-500/80 ring-offset-2 ring-offset-slate-950"
+                          : ""
+                      } active:scale-[0.99]`}
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-500">
+                            {category.icon} {category.label}
+                          </p>
+                          <p className="text-base font-semibold leading-snug text-slate-50">{topic.title}</p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {isRecommended ? (
+                            <span className="rounded-full bg-violet-500/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-200 ring-1 ring-violet-400/40">
+                              Next
+                            </span>
+                          ) : null}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${difficultyClasses[topic.difficulty]}`}
+                          >
+                            {topic.difficulty}
+                          </span>
+                          {status === "completed" ? (
+                            <span className="text-emerald-400" aria-hidden title="Completed">
+                              ✓
+                            </span>
+                          ) : status === "locked" ? (
+                            <span className="text-slate-600" aria-hidden title="Locked">
+                              🔒
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${difficultyClasses[topic.difficulty]}`}>
-                        {topic.difficulty}
-                      </span>
-                    </div>
-                    <p className="text-xs opacity-90">
-                      {status === "locked" ? "Locked" : status === "completed" ? "Completed" : "Unlocked"}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))}
+                      <p className="text-xs font-medium tracking-wide text-slate-400/90">
+                        {status === "locked"
+                          ? "Locked — tap to see prerequisites"
+                          : status === "completed"
+                            ? "Completed"
+                            : "Ready to learn"}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </CollapsibleRoadmapSection>
+          );
+        })}
       </div>
     </div>
   );
