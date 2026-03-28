@@ -10,28 +10,28 @@ export type NavGroup = {
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: "basics",
-    label: "Basics",
+    label: "Level 1 · Basics",
     sectionIds: ["level-1-basics"],
   },
   {
-    id: "grammar",
-    label: "Grammar",
-    sectionIds: [
-      "level-2-foundation",
-      "level-3-grammar",
-      "level-4-questions-negation",
-      "bonus-connectors",
-    ],
+    id: "core",
+    label: "Level 2 · Core",
+    sectionIds: ["level-2-core"],
   },
   {
-    id: "tenses",
-    label: "Tenses",
-    sectionIds: ["level-5-tenses"],
+    id: "verbs-place",
+    label: "Level 3 · Place & verbs",
+    sectionIds: ["level-3-place-verbs"],
   },
   {
-    id: "conversations",
-    label: "Conversations",
-    sectionIds: ["level-6-location", "level-7-conversations"],
+    id: "fluency",
+    label: "Level 4 · Fluency",
+    sectionIds: ["level-4-fluency"],
+  },
+  {
+    id: "situations",
+    label: "Level 5 · Situations",
+    sectionIds: ["level-5-situations"],
   },
 ];
 

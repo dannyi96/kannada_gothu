@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Topic } from "../data/roadmap";
 import { getLessonForTopic } from "../data/lessons";
-import { getExercisesForTopic } from "../utils/exerciseGenerator";
-import { splitTopicContent } from "../utils/topicContent";
 import { LessonQuiz } from "./LessonQuiz";
 import { McqItemBlock } from "./McqItemBlock";
-import { TopicExercises } from "./TopicExercises";
 
 type LessonStep = "concepts" | "examples" | "mini" | "quiz" | "done";
 
@@ -36,7 +33,6 @@ export function TopicPanel({
   const [step, setStep] = useState<LessonStep>("concepts");
 
   const lesson = topic ? getLessonForTopic(topic.id) : undefined;
-  const authored = Boolean(lesson);
 
   useEffect(() => {
     if (!topic) return;
@@ -61,16 +57,13 @@ export function TopicPanel({
       ? "💬"
       : topicLower.includes("tense") || topicLower.includes("continuous")
         ? "⏱️"
-        : topicLower.includes("question") || topicLower.includes("negation")
+        : topicLower.includes("question") || topicLower.includes("negation") || topicLower.includes("negative")
           ? "❓"
-          : topicLower.includes("location") || topicLower.includes("postposition")
+          : topicLower.includes("location") || topicLower.includes("postposition") || topicLower.includes("place")
             ? "📍"
             : topicLower.includes("greeting") || topicLower.includes("number")
               ? "🗣️"
               : "🧠";
-
-  const { concepts, examples } = splitTopicContent(topic.content);
-  const legacyExercises = getExercisesForTopic(topic);
 
   const difficultyStyle =
     topic.difficulty === "easy"
@@ -127,6 +120,8 @@ export function TopicPanel({
     );
   };
 
+  const showFlow = status !== "locked" && lesson;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:items-center sm:p-4"
@@ -161,11 +156,8 @@ export function TopicPanel({
               Close
             </button>
           </div>
-          {authored && status !== "locked" ? (
-            <nav
-              className="mt-4 flex border-t border-slate-800 pt-4"
-              aria-label="Lesson steps"
-            >
+          {showFlow ? (
+            <nav className="mt-4 flex border-t border-slate-800 pt-4" aria-label="Lesson steps">
               {stepDot("concepts", "Ideas")}
               {stepDot("examples", "Examples")}
               {stepDot("mini", "Practice")}
@@ -195,11 +187,15 @@ export function TopicPanel({
             </div>
           ) : null}
 
-          {status !== "locked" && authored && lesson ? (
+          {status !== "locked" && !lesson ? (
+            <p className="text-sm text-rose-300">Lesson content is missing for this topic. Please report this bug.</p>
+          ) : null}
+
+          {showFlow && lesson ? (
             <>
               {step === "concepts" ? (
                 <section>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Concepts</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Ideas</h3>
                   <ul className="mt-3 list-disc space-y-2 pl-5 text-base leading-relaxed text-slate-200">
                     {lesson.concepts.map((line) => (
                       <li key={line}>{line}</li>
@@ -211,25 +207,32 @@ export function TopicPanel({
               {step === "examples" ? (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Examples</h3>
-                  <ul className="mt-3 space-y-2 rounded-xl border border-slate-700/80 bg-slate-800/50 p-4 text-sm leading-relaxed text-slate-100 shadow-inner">
-                    {lesson.examples.map((ex) => (
-                      <li key={`${ex.kannada}-${ex.english ?? ""}`} className="border-l-2 border-sky-500/50 pl-3">
-                        <span className="font-mono text-sky-100">{ex.kannada}</span>
-                        {ex.english ? (
-                          <>
-                            <span className="text-slate-500"> → </span>
-                            <span className="text-slate-300">{ex.english}</span>
-                          </>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
+                  {lesson.examples.length === 0 ? (
+                    <p className="mt-3 text-sm text-slate-500">
+                      No vocabulary pairs in this lesson — the Ideas above carry the content. Continue to Practice and
+                      Quiz.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 space-y-2 rounded-xl border border-slate-700/80 bg-slate-800/50 p-4 text-sm leading-relaxed text-slate-100 shadow-inner">
+                      {lesson.examples.map((ex) => (
+                        <li key={`${ex.kannada}-${ex.english ?? ""}`} className="border-l-2 border-sky-500/50 pl-3">
+                          <span className="font-mono text-sky-100">{ex.kannada}</span>
+                          {ex.english ? (
+                            <>
+                              <span className="text-slate-500"> → </span>
+                              <span className="text-slate-300">{ex.english}</span>
+                            </>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </section>
               ) : null}
 
               {step === "mini" ? (
                 <section>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Mini practice</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Practice</h3>
                   <p className="mt-1 text-sm text-slate-500">Quick checks — immediate feedback after each answer.</p>
                   <div className="mt-4 space-y-4">
                     {lesson.miniPractice.map((item) => (
@@ -241,7 +244,7 @@ export function TopicPanel({
 
               {step === "quiz" ? (
                 <section>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Lesson quiz</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Quiz</h3>
                   <p className="mt-1 text-sm text-slate-500">Multiple choice — check each answer before moving on.</p>
                   <div className="mt-4">
                     <LessonQuiz topicId={topic.id} questions={lesson.quiz} />
@@ -253,8 +256,8 @@ export function TopicPanel({
                 <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-5 text-center">
                   <h3 className="text-lg font-semibold text-slate-100">Nice work</h3>
                   <p className="mt-2 text-sm text-slate-400">
-                    You&apos;ve gone through this lesson. Mark it complete to track progress, or jump to flashcards from
-                    the top nav to review vocabulary.
+                    You&apos;ve gone through this lesson. Mark it complete to track progress, or open Flashcards in the
+                    top nav to review.
                   </p>
                   {showNextLessonCta ? (
                     <button
@@ -271,72 +274,24 @@ export function TopicPanel({
                 </section>
               ) : null}
 
-              {authored ? (
-                <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-6">
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    disabled={stepIndex === 0}
-                    className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    disabled={stepIndex >= STEP_ORDER.length - 1}
-                    className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Continue
-                  </button>
-                </div>
-              ) : null}
-            </>
-          ) : null}
-
-          {status !== "locked" && !authored ? (
-            <>
-              <section className="mb-6">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Concepts</h3>
-                {concepts.length > 0 ? (
-                  <ul className="mt-3 list-disc space-y-2 pl-5 text-base leading-relaxed text-slate-200">
-                    {concepts.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-500">No separate concept notes — see examples below.</p>
-                )}
-              </section>
-
-              <div className="my-6 border-t border-slate-800" />
-
-              <section>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Examples & phrases</h3>
-                {examples.length > 0 ? (
-                  <ul className="mt-3 space-y-2 rounded-xl border border-slate-700/80 bg-slate-800/50 p-4 font-mono text-sm leading-relaxed text-slate-100 shadow-inner">
-                    {examples.map((line) => (
-                      <li key={line} className="border-l-2 border-sky-500/50 pl-3">
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-500">No phrase pairs listed for this topic.</p>
-                )}
-              </section>
-
-              <div className="my-6 border-t border-slate-800" />
-
-              <section>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Practice</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Short exercises — answer client-side; no data leaves your browser.
-                </p>
-                <div className="mt-4">
-                  <TopicExercises topicId={topic.id} exercises={legacyExercises} />
-                </div>
-              </section>
+              <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-6">
+                <button
+                  type="button"
+                  onClick={goBack}
+                  disabled={stepIndex === 0}
+                  className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={stepIndex >= STEP_ORDER.length - 1}
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Continue
+                </button>
+              </div>
             </>
           ) : null}
         </div>

@@ -21,7 +21,7 @@ export function normalizePair(left: string, right: string): NormalizedPair {
   return { kannada: L, english: R };
 }
 
-function parsePairs(content: string[]): NormalizedPair[] {
+export function parsePairs(content: string[]): NormalizedPair[] {
   const pairs: NormalizedPair[] = [];
   for (const line of content) {
     const t = line.trim();

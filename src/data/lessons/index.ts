@@ -1,20 +1,17 @@
+import { getTopicById, roadmapSections } from "../roadmap";
 import type { LessonFlashcard, LessonPayload } from "../../types/lesson";
-import { greetingsLesson } from "./greetings";
-import { sentenceStructureLesson } from "./sentenceStructure";
-
-const LESSONS: LessonPayload[] = [greetingsLesson, sentenceStructureLesson];
-
-const byTopicId = new Map<string, LessonPayload>(LESSONS.map((l) => [l.topicId, l]));
+import { buildLessonFromTopic } from "../../utils/buildLessonFromTopic";
 
 export function getLessonForTopic(topicId: string): LessonPayload | undefined {
-  return byTopicId.get(topicId);
+  const topic = getTopicById(topicId);
+  if (!topic) return undefined;
+  return buildLessonFromTopic(topic);
 }
 
 export function getAllAuthoredLessons(): LessonPayload[] {
-  return LESSONS;
+  return roadmapSections.flatMap((s) => s.topics).map((t) => buildLessonFromTopic(t));
 }
 
-/** All flashcards from authored lessons (for review mode). */
 export function getAllLessonFlashcards(): LessonFlashcard[] {
-  return LESSONS.flatMap((l) => l.flashcards);
+  return getAllAuthoredLessons().flatMap((l) => l.flashcards);
 }
