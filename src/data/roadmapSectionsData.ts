@@ -1,10 +1,11 @@
-import type { Section } from "./roadmapTypes";
+import type { SectionInput } from "./roadmapTypes";
 
 /**
  * Progressive path aligned to notes/kannada_notes_from_pdf.md (pages 1–89).
- * Concepts = plain lines; vocabulary/examples use "Kannada -> English" (see parsePairs).
+ * Plain lines = grammar notes; "Kannada -> English" = examples (see parsePairs).
+ * Overviews are attached in roadmap.ts from topicOverviews.ts.
  */
-export const roadmapSections: Section[] = [
+export const roadmapSectionsRaw: SectionInput[] = [
   {
     id: "level-1-basics",
     title: "Level 1: Basics — greetings, time, family, SOV, pronouns",

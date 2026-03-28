@@ -158,7 +158,7 @@ export function TopicPanel({
           </div>
           {showFlow ? (
             <nav className="mt-4 flex border-t border-slate-800 pt-4" aria-label="Lesson steps">
-              {stepDot("concepts", "Ideas")}
+              {stepDot("concepts", "Overview")}
               {stepDot("examples", "Examples")}
               {stepDot("mini", "Practice")}
               {stepDot("quiz", "Quiz")}
@@ -195,12 +195,26 @@ export function TopicPanel({
             <>
               {step === "concepts" ? (
                 <section>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Ideas</h3>
-                  <ul className="mt-3 list-disc space-y-2 pl-5 text-base leading-relaxed text-slate-200">
-                    {lesson.concepts.map((line) => (
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+                    What you&apos;re learning
+                  </h3>
+                  <ul className="mt-3 list-disc space-y-3 pl-5 text-base leading-relaxed text-slate-100">
+                    {lesson.overview.map((line) => (
                       <li key={line}>{line}</li>
                     ))}
                   </ul>
+                  {lesson.keyPoints.length > 0 ? (
+                    <>
+                      <h3 className="mt-8 text-sm font-semibold uppercase tracking-wider text-slate-500">
+                        Key points
+                      </h3>
+                      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-300">
+                        {lesson.keyPoints.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
                 </section>
               ) : null}
 

@@ -99,11 +99,18 @@ function makeMcqKannada(params: {
   };
 }
 
-function conceptOnlyLesson(topic: Topic, concepts: string[]): LessonPayload {
+function conceptOnlyLesson(topic: Topic, overview: string[], keyPoints: string[]): LessonPayload {
+  const merged = [...overview, ...keyPoints].filter((s) => s.trim().length > 2);
   const base =
-    concepts.length > 0
-      ? concepts
-      : ["Study this lesson with the notes and repeat key phrases aloud.", "Focus on one pattern at a time.", "Prefer full short sentences over isolated words."];
+    merged.length > 0
+      ? merged
+      : overview.length > 0
+        ? overview
+        : [
+            "Study this lesson with your notes and repeat key phrases aloud.",
+            "Focus on one pattern at a time.",
+            "Prefer full short sentences over isolated words.",
+          ];
   const distractors = [
     "Ignore subject–verb agreement in Kannada",
     "Always mirror English word order exactly",
@@ -115,10 +122,10 @@ function conceptOnlyLesson(topic: Topic, concepts: string[]): LessonPayload {
     return makeMcq({
       topicId: topic.id,
       idx: i,
-      prompt: "Which line belongs with this lesson’s core ideas?",
+      prompt: "Which line best matches what this lesson is about?",
       correct,
       wrongCandidates: base.filter((_, j) => j !== i % base.length).concat(distractors),
-      explanation: "Use the Ideas list as your anchor before moving to examples.",
+      explanation: "Match the overview and key points at the top of Ideas.",
       tag: "structure",
     });
   });
@@ -127,16 +134,17 @@ function conceptOnlyLesson(topic: Topic, concepts: string[]): LessonPayload {
     return makeMcq({
       topicId: topic.id,
       idx: i + 10,
-      prompt: `Quiz ${i + 1}/8 — which statement matches this lesson?`,
+      prompt: `Quiz ${i + 1}/8 — which statement fits this lesson?`,
       correct,
       wrongCandidates: base.filter((_, j) => j !== i % base.length).concat(distractors),
-      explanation: "Cross-check with the Ideas section; the wrong options are common traps.",
+      explanation: "Re-read What you’re learning and Key points before guessing.",
       tag: "structure",
     });
   });
   return {
     topicId: topic.id,
-    concepts: base,
+    overview,
+    keyPoints,
     examples: [],
     miniPractice: mini,
     quiz,
@@ -144,7 +152,7 @@ function conceptOnlyLesson(topic: Topic, concepts: string[]): LessonPayload {
       id: `${topic.id}-fc-concept-${i}`,
       kind: "knToEn" as const,
       front: text.slice(0, 120),
-      back: "Key idea — connect it to a sentence you can say aloud.",
+      back: "Recall how this fits into a sentence you can say aloud.",
     })),
   };
 }
@@ -183,17 +191,20 @@ function buildFlashcards(topicId: string, pairs: NormalizedPair[]): LessonFlashc
 }
 
 export function buildLessonFromTopic(topic: Topic): LessonPayload {
-  const concepts = topic.content
+  const overview = topic.overview;
+  const keyPoints = topic.content
     .map((l) => l.trim())
     .filter((l) => l.length > 2 && !ARROW.test(l));
   const pairs = parsePairs(topic.content);
 
   if (pairs.length === 0) {
-    return conceptOnlyLesson(topic, concepts.length > 0 ? concepts : ["Study the examples in your notes alongside this topic."]);
+    return conceptOnlyLesson(topic, overview, keyPoints);
   }
 
   const enPool = uniqueStrings(pairs.map((p) => p.english));
   const knPool = uniqueStrings(pairs.map((p) => p.kannada));
+  const structureCues =
+    keyPoints.length > 0 ? keyPoints : overview.length > 0 ? overview : ["Use SOV and natural Kannada rhythm."];
 
   const mini: LessonMcq[] = [];
   const p0 = pairs[0];
@@ -264,7 +275,7 @@ export function buildLessonFromTopic(topic: Topic): LessonPayload {
         }),
       );
     } else {
-      const cue = concepts[i % Math.max(concepts.length, 1)] ?? "Use SOV and natural Kannada rhythm.";
+      const cue = structureCues[i % structureCues.length];
       quiz.push(
         makeMcq({
           topicId: topic.id,
@@ -283,7 +294,8 @@ export function buildLessonFromTopic(topic: Topic): LessonPayload {
 
   return {
     topicId: topic.id,
-    concepts: concepts.length > 0 ? concepts : ["Work through the example pairs below — they follow your notes."],
+    overview,
+    keyPoints,
     examples,
     miniPractice: mini,
     quiz,

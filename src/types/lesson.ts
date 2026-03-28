@@ -20,7 +20,10 @@ export type LessonFlashcard = {
 
 export type LessonPayload = {
   topicId: string;
-  concepts: string[];
+  /** Shown first under Ideas — what this lesson teaches. */
+  overview: string[];
+  /** Grammar / usage bullets from topic content (non-example lines). */
+  keyPoints: string[];
   examples: { kannada: string; english?: string }[];
   miniPractice: LessonMcq[];
   quiz: LessonMcq[];
