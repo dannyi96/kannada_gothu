@@ -18,6 +18,7 @@ export type McqExercise = {
   prompt: string;
   options: string[];
   correctIndex: number;
+  explanation?: string;
 };
 
 export type TopicExercise = TranslationExercise | FillExercise | McqExercise;

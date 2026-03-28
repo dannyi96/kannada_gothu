@@ -124,12 +124,20 @@ function ExerciseBlock({ topicId, exercise }: { topicId: string; exercise: Topic
       </div>
 
       {submitted ? (
-        <p className="mt-2 text-sm text-slate-400">
-          Correct answer:{" "}
-          <span className="font-medium text-slate-200">
-            {exercise.kind === "mcq" ? exercise.options[exercise.correctIndex] : exercise.answer}
-          </span>
-        </p>
+        <div className="mt-2 space-y-2 text-sm text-slate-400">
+          <p>
+            Correct answer:{" "}
+            <span className="font-medium text-slate-200">
+              {exercise.kind === "mcq" ? exercise.options[exercise.correctIndex] : exercise.answer}
+            </span>
+          </p>
+          {exercise.kind === "mcq" && exercise.explanation ? (
+            <p className="leading-relaxed text-slate-300">
+              <span className="font-semibold text-slate-500">Why: </span>
+              {exercise.explanation}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { AppNav } from "./components/AppNav";
+import { AppNav, type AppMode } from "./components/AppNav";
+import { FlashcardView } from "./components/FlashcardView";
 import { ProgressHeader } from "./components/ProgressHeader";
 import { RoadmapGraph } from "./components/RoadmapGraph";
 import { TopicPanel } from "./components/TopicPanel";
@@ -21,6 +22,7 @@ function App() {
 
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [activeNav, setActiveNav] = useState<string | null>(null);
+  const [appMode, setAppMode] = useState<AppMode>("learn");
 
   useEffect(() => {
     recordVisit();
@@ -84,15 +86,22 @@ function App() {
           onReset={resetProgress}
         />
 
-        <AppNav activeNav={activeNav} onSelectNav={setActiveNav} />
+        <AppNav mode={appMode} onModeChange={setAppMode} activeNav={activeNav} onSelectNav={setActiveNav} />
 
-        <RoadmapGraph
-          sections={visibleSections}
-          selectedTopicId={selectedTopicId}
-          recommendedTopicId={nextId}
-          getTopicStatus={getTopicStatus}
-          onSelectTopic={setSelectedTopicId}
-        />
+        {appMode === "learn" ? (
+          <RoadmapGraph
+            sections={visibleSections}
+            selectedTopicId={selectedTopicId}
+            recommendedTopicId={nextId}
+            getTopicStatus={getTopicStatus}
+            onSelectTopic={setSelectedTopicId}
+          />
+        ) : (
+          <section aria-label="Flashcard review">
+            <h2 className="mb-4 text-lg font-semibold text-slate-100">Spaced repetition</h2>
+            <FlashcardView />
+          </section>
+        )}
       </div>
 
       <TopicPanel
@@ -102,6 +111,9 @@ function App() {
         prerequisiteTitles={prerequisiteTitles}
         onMarkCompleted={markCompleted}
         onClose={() => setSelectedTopicId(null)}
+        nextTopicId={nextId}
+        nextTopicTitle={nextTopicTitle}
+        onGoToTopic={setSelectedTopicId}
       />
     </main>
   );

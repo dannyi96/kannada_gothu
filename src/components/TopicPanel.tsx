@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import type { Topic } from "../data/roadmap";
+import { getLessonForTopic } from "../data/lessons";
 import { getExercisesForTopic } from "../utils/exerciseGenerator";
 import { splitTopicContent } from "../utils/topicContent";
+import { LessonQuiz } from "./LessonQuiz";
+import { McqItemBlock } from "./McqItemBlock";
 import { TopicExercises } from "./TopicExercises";
+
+type LessonStep = "concepts" | "examples" | "mini" | "quiz" | "done";
+
+const STEP_ORDER: LessonStep[] = ["concepts", "examples", "mini", "quiz", "done"];
 
 type TopicPanelProps = {
   topic: Topic | null;
@@ -10,6 +17,9 @@ type TopicPanelProps = {
   prerequisiteTitles: string[];
   onMarkCompleted: (topicId: string) => void;
   onClose: () => void;
+  nextTopicId: string | null;
+  nextTopicTitle: string | null;
+  onGoToTopic: (topicId: string) => void;
 };
 
 export function TopicPanel({
@@ -18,8 +28,15 @@ export function TopicPanel({
   prerequisiteTitles,
   onMarkCompleted,
   onClose,
+  nextTopicId,
+  nextTopicTitle,
+  onGoToTopic,
 }: TopicPanelProps) {
   const [celebrate, setCelebrate] = useState(false);
+  const [step, setStep] = useState<LessonStep>("concepts");
+
+  const lesson = topic ? getLessonForTopic(topic.id) : undefined;
+  const authored = Boolean(lesson);
 
   useEffect(() => {
     if (!topic) return;
@@ -53,7 +70,7 @@ export function TopicPanel({
               : "🧠";
 
   const { concepts, examples } = splitTopicContent(topic.content);
-  const exercises = getExercisesForTopic(topic);
+  const legacyExercises = getExercisesForTopic(topic);
 
   const difficultyStyle =
     topic.difficulty === "easy"
@@ -67,6 +84,47 @@ export function TopicPanel({
     onMarkCompleted(topic.id);
     setCelebrate(true);
     window.setTimeout(() => setCelebrate(false), 700);
+  };
+
+  const stepIndex = STEP_ORDER.indexOf(step);
+  const goBack = () => {
+    if (stepIndex <= 0) return;
+    setStep(STEP_ORDER[stepIndex - 1]);
+  };
+  const goNext = () => {
+    if (stepIndex >= STEP_ORDER.length - 1) return;
+    setStep(STEP_ORDER[stepIndex + 1]);
+  };
+
+  const showNextLessonCta =
+    step === "done" && nextTopicId && nextTopicId !== topic.id && status !== "locked";
+
+  const stepDot = (s: LessonStep, label: string) => {
+    const i = STEP_ORDER.indexOf(s);
+    const active = step === s;
+    const past = stepIndex > i;
+    return (
+      <button
+        key={s}
+        type="button"
+        onClick={() => {
+          if (status === "locked") return;
+          if (past || active) setStep(s);
+        }}
+        className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg px-1 py-2 text-center transition ${
+          active ? "bg-slate-800 text-sky-200" : past ? "text-slate-300 hover:bg-slate-800/60" : "text-slate-600"
+        } ${status !== "locked" && (past || active) ? "cursor-pointer" : "cursor-default"}`}
+      >
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+            active ? "bg-sky-600 text-white" : past ? "bg-emerald-600/80 text-white" : "bg-slate-800 text-slate-500"
+          }`}
+        >
+          {i + 1}
+        </span>
+        <span className="hidden text-[10px] font-medium uppercase tracking-wide sm:block">{label}</span>
+      </button>
+    );
   };
 
   return (
@@ -103,6 +161,18 @@ export function TopicPanel({
               Close
             </button>
           </div>
+          {authored && status !== "locked" ? (
+            <nav
+              className="mt-4 flex border-t border-slate-800 pt-4"
+              aria-label="Lesson steps"
+            >
+              {stepDot("concepts", "Ideas")}
+              {stepDot("examples", "Examples")}
+              {stepDot("mini", "Practice")}
+              {stepDot("quiz", "Quiz")}
+              {stepDot("done", "Done")}
+            </nav>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -125,7 +195,106 @@ export function TopicPanel({
             </div>
           ) : null}
 
-          {status !== "locked" ? (
+          {status !== "locked" && authored && lesson ? (
+            <>
+              {step === "concepts" ? (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Concepts</h3>
+                  <ul className="mt-3 list-disc space-y-2 pl-5 text-base leading-relaxed text-slate-200">
+                    {lesson.concepts.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {step === "examples" ? (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Examples</h3>
+                  <ul className="mt-3 space-y-2 rounded-xl border border-slate-700/80 bg-slate-800/50 p-4 text-sm leading-relaxed text-slate-100 shadow-inner">
+                    {lesson.examples.map((ex) => (
+                      <li key={`${ex.kannada}-${ex.english ?? ""}`} className="border-l-2 border-sky-500/50 pl-3">
+                        <span className="font-mono text-sky-100">{ex.kannada}</span>
+                        {ex.english ? (
+                          <>
+                            <span className="text-slate-500"> → </span>
+                            <span className="text-slate-300">{ex.english}</span>
+                          </>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {step === "mini" ? (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Mini practice</h3>
+                  <p className="mt-1 text-sm text-slate-500">Quick checks — immediate feedback after each answer.</p>
+                  <div className="mt-4 space-y-4">
+                    {lesson.miniPractice.map((item) => (
+                      <McqItemBlock key={item.id} topicId={topic.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {step === "quiz" ? (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Lesson quiz</h3>
+                  <p className="mt-1 text-sm text-slate-500">Multiple choice — check each answer before moving on.</p>
+                  <div className="mt-4">
+                    <LessonQuiz topicId={topic.id} questions={lesson.quiz} />
+                  </div>
+                </section>
+              ) : null}
+
+              {step === "done" ? (
+                <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-5 text-center">
+                  <h3 className="text-lg font-semibold text-slate-100">Nice work</h3>
+                  <p className="mt-2 text-sm text-slate-400">
+                    You&apos;ve gone through this lesson. Mark it complete to track progress, or jump to flashcards from
+                    the top nav to review vocabulary.
+                  </p>
+                  {showNextLessonCta ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onGoToTopic(nextTopicId);
+                        setStep("concepts");
+                      }}
+                      className="mt-5 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500"
+                    >
+                      Next: {nextTopicTitle ?? "lesson"}
+                    </button>
+                  ) : null}
+                </section>
+              ) : null}
+
+              {authored ? (
+                <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-6">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={stepIndex === 0}
+                    className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={stepIndex >= STEP_ORDER.length - 1}
+                    className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {status !== "locked" && !authored ? (
             <>
               <section className="mb-6">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Concepts</h3>
@@ -165,7 +334,7 @@ export function TopicPanel({
                   Short exercises — answer client-side; no data leaves your browser.
                 </p>
                 <div className="mt-4">
-                  <TopicExercises topicId={topic.id} exercises={exercises} />
+                  <TopicExercises topicId={topic.id} exercises={legacyExercises} />
                 </div>
               </section>
             </>
